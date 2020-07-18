@@ -5,7 +5,7 @@
 <body>
 	You will be Redirected!...
 	<script>
-		window.location = "/public";
+		window.location = "./public";
 	</script>
 </body>
 </html>
