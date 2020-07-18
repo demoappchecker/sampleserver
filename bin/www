@@ -1,0 +1,133 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('sampleserver:server');
+var http = require('http');
+var https = require('https');
+
+const config = require('../config/config')
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var https_port = normalizePort(process.env.PORT || config.serverPort.httpsPortNumber);
+var http_port = normalizePort(process.env.PORT_HTTPS || config.serverPort.httpPortNumber);
+
+app.set('port', https_port);
+
+/**
+ * Specifying HTTPS server Certificate Details.
+ */
+
+const options = {
+  key: config.certificates.key,
+  cert: config.certificates.cert
+};
+
+/**
+ * Create HTTPS server.
+ */
+
+var https_server = https.createServer(options,app);
+
+/**
+ * Listen on provided port, on all network interfaces(for HTTPS Server).
+ */
+
+https_server.listen(https_port);
+https_server.on('error', onError);
+https_server.on('listening', onListening);
+
+/**
+* Create HTTP or HTTPS protocol resolver server
+*/
+
+function serverResolver(){
+	if(config.useHTTPS){
+		return function(req,res){
+			res.writeHead(301, { "Location": "https://" + req.headers['host'].replace(http_port,https_port) + req.url });
+			res.end();
+		}
+	}
+	else{
+		return app;
+	}
+}
+
+/**
+* Create HTTP server
+*/
+
+var http_server = http.createServer(serverResolver());
+
+
+/**
+ * Listen on provided port, on all network interfaces(for HTTPS Server).
+ */
+ 
+ http_server.listen(http_port);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTPS server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTPS server "listening" event.
+ */
+
+function onListening() {
+  var addr = https_server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
